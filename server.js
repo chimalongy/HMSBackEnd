@@ -1,7 +1,9 @@
+require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const port = process.env.PORT || 4000;
+const port = process.env.PORT;
+const cookieParser = require('cookie-parser');
 
 const app = express();
 
@@ -9,6 +11,7 @@ const app = express();
 const adminRoutes = require(path.join(__dirname, "./routes/AdminRouter"));
 
 // MIDDLEWARES
+app.use(cookieParser()); 
 app.use(express.json());
 app.use(cors());
 
