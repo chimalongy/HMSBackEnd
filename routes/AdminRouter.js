@@ -23,23 +23,21 @@ const {
 
   deleteCategory,
   deleteRoom,
-  loginAdmin
+  loginAdmin,
+  getAllHotels
 } = require("../controllers/AdminFunctions");
 
 const authMiddleware = (req, res, next) => {
-  const token = req.cookies.admin_token;
+  const token = req.cookies['admin_token']; // Read the token from cookies
 
-  if (!token) {
-    return res.status(401).json({ error: 'Unauthorized: No token provided' });
-  }
+  if (token == null) return res.sendStatus(401);
 
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    req.admin_email = decoded.admin_email; // Store email from token for use in protected routes
+  jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
     next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-  }
+  });
+
 };
 
 
@@ -70,9 +68,9 @@ router.post("/login", loginLimiter, async (req, res)=>{
 })
 
 
-router.post("/createhotel", authMiddleware, (req,  res) => {
+router.post("/createhotel", authMiddleware, async(req,  res) => {
   const {hotel_name,hotel_location,hotel_email,hotel_password}= req.body
-   const result =createHotel(hotel_name, hotel_location,hotel_email,hotel_password);
+   const result =await createHotel(hotel_name, hotel_location,hotel_email,hotel_password);
    if (typeof result === 'string') {
     res.status(401).json({ message: result });
   } else {
@@ -95,9 +93,9 @@ router.post("/createcategory", authMiddleware, async(req, res) => {
  
 });
 
-router.post("/createroom",authMiddleware, (req, res) => {
+router.post("/createroom",authMiddleware, async(req, res) => {
   const { hotel_id, category_id, room_number}= req.body
-  result =createRoom(hotel_id, category_id, room_number);
+  result =await createRoom(hotel_id, category_id, room_number);
   console.log(typeof result)
   if (typeof result === 'string') {
     res.status(401).json({ message: result });
@@ -109,7 +107,7 @@ router.post("/createroom",authMiddleware, (req, res) => {
 
 //update
 
-router.patch("/updatehotelname",authMiddleware, (req, res) => {
+router.patch("/updatehotelname",authMiddleware, async (req, res) => {
   const { hotel_id, new_hotel_name } = req.body;
   updateHotelName(hotel_id, new_hotel_name)
     .then((updatedHotel) => {
@@ -121,7 +119,7 @@ router.patch("/updatehotelname",authMiddleware, (req, res) => {
     });
 });
 
-router.patch("/updatehotellocation",authMiddleware, (req, res) => {
+router.patch("/updatehotellocation",authMiddleware, async(req, res) => {
   const { hotel_id, new_hotel_location } = req.body;
 
   updateHotelLocation(hotel_id, new_hotel_location)
@@ -312,17 +310,30 @@ router.delete('/deleteroom',authMiddleware, (req, res) => {
     });
 });
 
+router.get('/gethotels', authMiddleware, (req, res) => {
+ getAllHotels()
+    .then((hotels) => {
+      if (hotels) {
+        res.json({ message: 'Hotels fetched successfully', data: hotels });
+      } else {
+        res.status(200).json({ message: 'No hotels found' });
+      }
+    })
+    .catch((err) => {
+      console.error('Error:', err);
+      res.status(500).json({ error: 'An error occurred while fetching hostels' });
+    });
+});
 
+router.post('/logout', (req, res) => {
+  // Clear the JWT token from the cookies
+  res.clearCookie('admin_token', { httpOnly: true, secure: false });
+  return res.status(200).json({ message: 'Logout successful' });
+});
 
 
 
 
 module.exports = router; 
 
-module.exports = router;
 
-module.exports = router;
-
-module.exports = router;
-
-module.exports = router;

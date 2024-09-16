@@ -13,10 +13,13 @@ const adminRoutes = require(path.join(__dirname, "./routes/AdminRouter"));
 // MIDDLEWARES
 app.use(cookieParser()); 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000',  // Replace with the exact origin of your React app
+  credentials: true,                // Allow credentials to be sent (cookies, authorization headers, etc.)
+}));
 
 // ROUTES
-app.use("/admin", adminRoutes);
+app.use("/admin", adminRoutes); 
 
 // START SERVER
 app.listen(port, () => {

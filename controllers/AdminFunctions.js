@@ -426,7 +426,21 @@ const loginAdmin = async (admin_email, admin_password) => {
 };
 
 
+const getAllHotels = async () => {
+  try {
+    const query = 'SELECT * FROM hoteltable'; // Query to fetch all hotels
+    const result = await pool.query(query);
 
+    if (result.rows.length === 0) {
+      return {  message: 'No hotels found' }; // Return as an object
+    }
+
+    return { message:"all hotels retrived", data: result.rows }; // Return the result as part of an object
+  } catch (err) {
+    console.error('Error fetching hotels:', err);
+    return { message: 'Error fetching hotels' }; // Return the error as part of an object
+  }
+};
 
 
 
@@ -537,4 +551,5 @@ module.exports = {
   deleteCategory,
 
   loginAdmin,
+  getAllHotels,
 };
