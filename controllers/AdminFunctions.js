@@ -442,6 +442,21 @@ const getAllHotels = async () => {
   }
 };
 
+const getHotelCategories = async (hotel_id) => {
+  try {
+    const query = 'SELECT * FROM categories WHERE hotel_id = $1';
+    const result = await pool.query(query, [hotel_id]); // Pass hotel_id as parameter
+
+    if (result.rows.length === 0) {
+      return { message: 'No categories found for this hotel' }; // No categories found
+    }
+
+    return { message: 'Categories retrieved', data: result.rows }; // Return categories
+  } catch (err) {
+    console.error('Error fetching categories:', err);
+    return { message: 'Error fetching categories' }; // Return error message
+  }
+};
 
 
 
@@ -552,4 +567,5 @@ module.exports = {
 
   loginAdmin,
   getAllHotels,
+  getHotelCategories
 };

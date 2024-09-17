@@ -24,7 +24,9 @@ const {
   deleteCategory,
   deleteRoom,
   loginAdmin,
-  getAllHotels
+  getAllHotels,
+  getHotelCategories
+
 } = require("../controllers/AdminFunctions");
 
 const authMiddleware = (req, res, next) => {
@@ -324,6 +326,21 @@ router.get('/gethotels', authMiddleware, (req, res) => {
       res.status(500).json({ error: 'An error occurred while fetching hostels' });
     });
 });
+
+router.post("/gethotelcategories", authMiddleware, async(req, res)=>{
+    const {hotel_id}=req.body;
+    getHotelCategories(hotel_id)
+    .then((result)=>{
+      if (result.data){
+        res.status(200).json({message: result.message, data:result.data})
+      }
+      else{
+        res.status(200).json({message: result.message})
+      }
+    })
+    .catch((error)=>console.log(error));
+
+})
 
 router.post('/logout', (req, res) => {
   // Clear the JWT token from the cookies
