@@ -25,7 +25,9 @@ const {
   deleteRoom,
   loginAdmin,
   getAllHotels,
-  getHotelCategories
+  getHotelCategories,
+  editHotel,
+  editCategory
 
 } = require("../controllers/AdminFunctions");
 
@@ -341,6 +343,39 @@ router.post("/gethotelcategories", authMiddleware, async(req, res)=>{
     .catch((error)=>console.log(error));
 
 })
+
+router.put("/edithotel", authMiddleware, async(req, res)=>{
+  const {hotel_id, hotel_name, hotel_location, hotel_email, hotel_password}=req.body;
+  editHotel(hotel_id, hotel_name, hotel_location, hotel_email, hotel_password)
+  .then((result)=>{
+    if (result.data){
+      res.status(200).json({message: result.message, data:result.data})
+    }
+    else{
+      res.status(200).json({message: result.message})
+    }
+  })
+  .catch((error)=>console.log(error));
+
+})
+
+
+router.put('/editcategory', async (req, res) => {
+  const { category_id, category_name, category_price } = req.body;
+
+  if (!category_id || !category_name || !category_price) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  try {
+    const result = await editCategory(category_id, category_name, category_price);
+    return res.json(result);
+  } catch (err) {
+    console.error('Error in editing category:', err);
+    return res.status(500).json({ message: 'Error updating category' });
+  }
+});
+
 
 router.post('/logout', (req, res) => {
   // Clear the JWT token from the cookies

@@ -31,7 +31,8 @@ async function createHotel(hotel_name, hotel_location, hotel_email, hotel_passwo
     `;
 
     const hashedPassword =await encryptPassword(hotel_password)
-    const values = [hotel_name, hotel_location, hotel_email, hashedPassword];
+    hotel_password= hashedPassword;
+    const values = [hotel_name, hotel_location, hotel_email, hotel_password];
     
     // Execute the query directly using the pool
     const res = await pool.query(queryText, values); 
@@ -458,8 +459,55 @@ const getHotelCategories = async (hotel_id) => {
   }
 };
 
+const editHotel = async (hotel_id, hotel_name, hotel_location, hotel_email, hotel_password) => {
+  try {
+    
+    const updateQuery = `
+      UPDATE hoteltable
+      SET hotel_name = $1,
+          hotel_location = $2,
+          hotel_email = $3,
+          hotel_password = $4
+      WHERE id = $5
+      RETURNING *;  
+    `;
+
+    const password = await  encryptPassword(hotel_password)
+    hotel_password=password
+   
+    const result = await pool.query(updateQuery, [hotel_name, hotel_location, hotel_email, hotel_password, hotel_id]);
+
+    
+    if (result.rows.length === 0) {
+      return { message: 'No hotel found with the given ID' }; 
+    }
+
+    return { message: 'Hotel updated successfully', data: result.rows[0] }; 
+  } catch (err) {
+    console.error('Error updating hotel:', err);
+    return { message: 'Error updating hotel' }; 
+  }
+};
 
 
+
+
+
+const editCategory = async (category_id, category_name, category_price) => {
+  try {
+    const query = 'UPDATE categories SET category_name = $1, category_price = $2 WHERE id = $3 RETURNING *';
+    const result = await pool.query(query, [category_name, category_price, category_id]);
+
+    if (result.rows.length === 0) {
+      return { message: 'Category not found or no changes made' }; // Category not found
+    }
+
+    return { message: 'Category updated successfully', data: result.rows[0] }; // Return updated category
+  } catch (err) {
+    console.error('Error updating category:', err);
+    return { message: 'Error updating category' }; // Return error message
+  }
+};
 
 
 
@@ -567,5 +615,7 @@ module.exports = {
 
   loginAdmin,
   getAllHotels,
-  getHotelCategories
+  getHotelCategories,
+  editHotel,
+  editCategory
 };
