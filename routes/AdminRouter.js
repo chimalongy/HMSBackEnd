@@ -27,7 +27,8 @@ const {
   getAllHotels,
   getHotelCategories,
   editHotel,
-  editCategory
+  editCategory,
+  getRooms
 
 } = require("../controllers/AdminFunctions");
 
@@ -375,6 +376,25 @@ router.put('/editcategory', async (req, res) => {
     return res.status(500).json({ message: 'Error updating category' });
   }
 });
+
+
+router.post("/getrooms", authMiddleware, async (req, res) => {
+  const { hotel_id, category_id } = req.body; // Extract hotel_id and category_id from the request body
+
+  getRooms(hotel_id, category_id)
+    .then((result) => {
+      if (result.data) {
+        res.status(200).json({ message: result.message, data: result.data });
+      } else {
+        res.status(200).json({ message: result.message });
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching rooms:", error);
+      res.status(500).json({ message: "Internal server error" });
+    });
+});
+
 
 
 router.post('/logout', (req, res) => {

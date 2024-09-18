@@ -509,6 +509,22 @@ const editCategory = async (category_id, category_name, category_price) => {
   }
 };
 
+const getRooms = async (hotel_id, category_id) => {
+  try {
+    const query = 'SELECT * FROM rooms WHERE hotel_id = $1 AND category_id = $2';
+    const result = await pool.query(query, [hotel_id, category_id]); // Pass hotel_id and category_id as parameters
+
+    if (result.rows.length === 0) {
+      return { message: 'No rooms found for this category in the hotel' }; // No rooms found
+    }
+
+    return { message: 'Rooms retrieved', data: result.rows }; // Return rooms
+  } catch (err) {
+    console.error('Error fetching rooms:', err);
+    return { message: 'Error fetching rooms' }; // Return error message
+  }
+};
+
 
 
 
@@ -617,5 +633,6 @@ module.exports = {
   getAllHotels,
   getHotelCategories,
   editHotel,
-  editCategory
+  editCategory,
+  getRooms
 };
