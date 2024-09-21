@@ -29,5 +29,6 @@ async function checkPassword(plainPassword, hashedPassword) {
   
 
 module.exports ={
-    encryptPassword
+    encryptPassword,
+    checkPassword
 }

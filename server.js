@@ -9,6 +9,7 @@ const app = express();
 
 // Ensure the correct path for the router
 const adminRoutes = require(path.join(__dirname, "./routes/AdminRouter"));
+const hotelRoutes = require(path.join(__dirname, "./routes/HotelRouter"))
 
 // MIDDLEWARES
 app.use(cookieParser()); 
@@ -20,6 +21,7 @@ app.use(cors({
 
 // ROUTES
 app.use("/admin", adminRoutes); 
+app.use("/hotels", hotelRoutes);
 
 // START SERVER
 app.listen(port, () => {

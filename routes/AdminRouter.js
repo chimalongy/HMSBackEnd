@@ -360,7 +360,6 @@ router.put("/edithotel", authMiddleware, async(req, res)=>{
 
 })
 
-
 router.put('/editcategory', async (req, res) => {
   const { category_id, category_name, category_price } = req.body;
 
@@ -376,7 +375,6 @@ router.put('/editcategory', async (req, res) => {
     return res.status(500).json({ message: 'Error updating category' });
   }
 });
-
 
 router.post("/getrooms", authMiddleware, async (req, res) => {
   const { hotel_id, category_id } = req.body; // Extract hotel_id and category_id from the request body
@@ -394,8 +392,6 @@ router.post("/getrooms", authMiddleware, async (req, res) => {
       res.status(500).json({ message: "Internal server error" });
     });
 });
-
-
 
 router.post('/logout', (req, res) => {
   // Clear the JWT token from the cookies
