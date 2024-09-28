@@ -51,26 +51,48 @@ async function createHotel(hotel_name, hotel_location, hotel_email, hotel_passwo
 async function createCategory(hotel_id, category_name, category_price) {
   console.log("Creating a category.");
 
+  const checkCategoryQuery = `
+    SELECT * FROM public.Categories 
+    WHERE hotel_id = $1 AND category_name = $2;
+  `;
+
   const insertCategoryQuery = `
     INSERT INTO public.Categories (hotel_id, category_name, category_price)
     VALUES ($1, $2, $3)
     RETURNING *;
   `;
 
-  const values = [hotel_id, category_name, category_price];
+  const checkValues = [hotel_id, category_name];
+  const insertValues = [hotel_id, category_name, category_price];
 
   try {
-    const res = await pool.query(insertCategoryQuery, values);
-    console.log("Category created successfully:", res.rows[0]);
-    return res.rows[0]; // Returning the newly created category
+    
+    const checkRes = await pool.query(checkCategoryQuery, checkValues);
+
+    if (checkRes.rows.length > 0) {
+      console.log("Category name already exists for this hotel.");
+      return { error: "Category name already exists for this hotel." };
+    }
+
+
+    const insertRes = await pool.query(insertCategoryQuery, insertValues);
+    console.log("Category created successfully:", insertRes.rows[0]);
+    return insertRes.rows[0]; // Returning the newly created category
+
   } catch (err) {
     console.error("Error creating category:", err.message);
-    return err.message
+    return { error: err.message };
   }
 }
 
+
 async function createRoom(hotel_id, category_id, room_number, check_in_state = false, clean_state = true) {
   console.log("Creating a room.");
+
+  const checkRoomQuery = `
+    SELECT * FROM public.Rooms 
+    WHERE hotel_id = $1 AND category_id = $2 AND room_number = $3;
+  `;
 
   const insertRoomQuery = `
     INSERT INTO public.Rooms (hotel_id, category_id, room_number, check_in_state, clean_state)
@@ -78,18 +100,29 @@ async function createRoom(hotel_id, category_id, room_number, check_in_state = f
     RETURNING *;
   `;
 
-  const values = [hotel_id, category_id, room_number, check_in_state, clean_state];
+  const checkValues = [hotel_id, category_id, room_number];
+  const insertValues = [hotel_id, category_id, room_number, check_in_state, clean_state];
 
   try {
-    const res = await pool.query(insertRoomQuery, values);
-    console.log("Room created successfully:", res.rows[0]);
-    return res.rows[0];
+    // Check if the room already exists
+    const checkRes = await pool.query(checkRoomQuery, checkValues);
+
+    if (checkRes.rows.length > 0) {
+      console.log("Room already exists for this hotel, category, and room number.");
+      return { error: "Room already exists for this hotel, category, and room number." };
+    }
+
+    // Insert the room if it doesn't exist
+    const insertRes = await pool.query(insertRoomQuery, insertValues);
+    console.log("Room created successfully:", insertRes.rows[0]);
+    return insertRes.rows[0];
+
   } catch (err) {
     console.error("Error creating room:", err.message);
-    return err.message
-
+    return { error: err.message };
   }
 }
+
 
 
 async function updateHotelName(hotel_id, new_name) {
@@ -357,7 +390,6 @@ async function updateRoomCheckInState(room_id, new_check_in_state) {
     return err.message;
   }
 }
-
 async function updateRoomCleanState(room_id, new_clean_state) {
   console.log("Updating clean state.");
 
@@ -528,7 +560,7 @@ const getRooms = async (hotel_id, category_id) => {
 
 
 
-
+ 
 
 
 
@@ -553,7 +585,7 @@ async function createHotelTable() {
   } catch (err) {
     console.error("Error creating table:", err.stack);
   } finally {
-    await pool.end();
+  
   }
 }
 
@@ -571,14 +603,16 @@ async function createCategoryTable() {
 
   try {
     await pool.connect();
-    await pool.query(createTableQuery);
+    await pool.query(createTableQuery); // Directly use the pool to run the query
     console.log("RoomCategoryTable created successfully.");
   } catch (err) {
     console.error("Error creating table:", err.message);
-  } finally {
-    await pool.end();
   }
+ finally{
+ 
+ }
 }
+ 
 
 async function createRoomsTable() {
   const createTableQuery = `
@@ -586,7 +620,7 @@ async function createRoomsTable() {
       id SERIAL PRIMARY KEY,
       hotel_id INTEGER NOT NULL,
       category_id INTEGER NOT NULL,
-      room_number INTEGER UNIQUE NOT NULL,
+      room_number INTEGER NOT NULL,
       check_in_state BOOLEAN DEFAULT false,
       clean_state BOOLEAN DEFAULT true,
       FOREIGN KEY (hotel_id) REFERENCES public.HotelTable(id) ON DELETE CASCADE,
@@ -595,14 +629,18 @@ async function createRoomsTable() {
   `;
 
   try {
+    await pool.connect();
     await pool.query(createTableQuery);
     console.log("Rooms table created successfully.");
   } catch (err) {
     console.error("Error creating table:", err.message);
   }
+
 }
 
-
+createHotelTable(); 
+createCategoryTable(); 
+createRoomsTable(); 
 
 
 

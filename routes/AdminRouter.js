@@ -89,8 +89,8 @@ router.post("/createcategory", authMiddleware, async(req, res) => {
   
   const {hotel_id, category_name, category_price} = req.body
   const result = await createCategory(hotel_id, category_name, category_price);
-  if (typeof result === 'string') {
-    res.status(401).json({ message: result });
+  if (result.error) {
+    res.status(200).json({ message: result.error });
   } else {
     res.status(200).json({ message: 'success', data: result });
   }
@@ -101,9 +101,8 @@ router.post("/createcategory", authMiddleware, async(req, res) => {
 router.post("/createroom",authMiddleware, async(req, res) => {
   const { hotel_id, category_id, room_number}= req.body
   result =await createRoom(hotel_id, category_id, room_number);
-  console.log(typeof result)
-  if (typeof result === 'string') {
-    res.status(401).json({ message: result });
+  if (result.error) {
+    res.status(200).json({ message: result.error });
   } else {
     res.status(200).json({ message: 'success', data: result });
   }

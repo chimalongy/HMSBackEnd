@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
-const { hotelLogin, getHotelCategories, getHotelRooms } = require("../controllers/HotelFunctions");
+const { hotelLogin, getHotelCategories, getHotelRooms,createReservation, getStayViewData   } = require("../controllers/HotelFunctions");
 
 
 
@@ -37,10 +37,14 @@ router.post("/login", async (req, res) => {
      if (hotel_rooms.data){hotel_rooms=hotel_rooms.data}
      else{hotel_rooms=hotel_rooms.message}
 
+     let stayviewData= await getStayViewData("","",hotel_data.id)
+
+     console.log(stayviewData)
+
     
      const token = jwt.sign({ hotel_email:hotel_data.hotel_email }, process.env.SECRET_KEY, { expiresIn: '25h' });
     res.cookie('hotel_token', token, { httpOnly: true, secure: false });
-    res.json({message:"sucessful", hotel_data: hotel_data, hotel_category_data: hotel_categories, hotel_room_data: hotel_rooms})
+    res.json({message:"sucessful", hotel_data: hotel_data, hotel_category_data: hotel_categories, hotel_room_data: hotel_rooms, stayviewData:stayviewData})
    }
    else{
      res.status(200).json(loginResponse)
@@ -97,7 +101,38 @@ router.post('/logout', (req, res) => {
     }
 });
 
+router.post('/createreservation',  async (req, res) => {
+    console.log("hitting");
+    const reservationData = req.body;
+  
+    try {
+      const result = await createReservation(reservationData);
+      
+      if (result.message =="sucess"){
+        let hotel_rooms= await getHotelRooms(reservationData.hotel_id);
+        
+        res.status(200).json({message:result.message, reservationID: result.reservationID, hotel_room_data:hotel_rooms});
 
+      }
+      else{
+        res.status(200).json({message:"an error occured"});
+      }
+
+      
+     
+    } catch (error) {
+      res.status(200).json({ error: error.message });
+    }
+  });
+  
+
+  router.post('/getstayviewdata', async (req, res)=>{
+    const {start_date, end_date, hotel_id} = req.body;
+      console.log("HITTONG")
+      const result =  await getStayViewData( !start_date||start_date==""?"":start_date, !end_date||end_date==""?"":end_date,hotel_id);
+      res.json({message:"hitting endpoint", data:result})
+
+  })
 
 
 
