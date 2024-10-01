@@ -385,6 +385,7 @@ async function getStayViewData(start_date, end_date, hotel_id) {
           // Construct room reservation data
           let roomReservationData = {
               roomNumber: categoryRooms[j].room_number,
+              room_id: categoryRooms[j].id,
               price: hotelCategories[i].category_price,
               bookings: bookings,
           };
