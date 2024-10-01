@@ -346,77 +346,6 @@ async function updateRoomCleanState(room_id, new_clean_state) {
 }
 
 
-// async function getStayViewData(start_date, end_date,hotel_id){
-
-//      let stayviewData =[]
-//     let hotelCategories = await getHotelCategories(hotel_id);
-//     ///console.log("HOTEL CATEGORIES",hotelCategories);
-//     hotelCategories = hotelCategories.data;
-//    // styviewData.push({"categories":hotelCategories})
-   
-//    let roomsReservationList =[];
-
-//     for ( let i= 0; i<hotelCategories.length; i++){
-//       //console.log (hotelCategories[i]. category_name)
-//       let categoryRooms = await getHotelRoomsByCategory(hotel_id, hotelCategories[i].id);
-//       //console.log( categoryRooms.data);
-//       categoryRooms = categoryRooms.data
-
-//    //  console.log( "Rooms for Category "+hotelCategories[i]. category_name +" ", categoryRooms)
-//    let bookings =[];
-//         for (let j = 0; j<categoryRooms.length; j++){
-
-//         //  console.log("Now searching for reservations for "+hotelCategories[i].category_name+" "+ categoryRooms[j].room_number+" With ID "+ categoryRooms[j].id)
-//           let roomReservationHistory =  await getRoomReservationHistory(categoryRooms[j].id);
-//           roomReservationHistory = roomReservationHistory.data;
-         
-//       // console.log("ROOM RESERVATIONS FOR room "+ hotelCategories[i].category_name+" "+categoryRooms[j].room_number+": ",)
-//             //extract bookings data:
-           
-//             console.log(roomReservationHistory.length)
-
-//             for (let k = 0; k< roomReservationHistory.length; k++){
-//                 const bookingdata = {
-//                   guestname:roomReservationHistory[k].guestname,
-//                   checkin_date:roomReservationHistory[k].checkin_date,
-//                   checkout_date: roomReservationHistory[k].checkout_date,
-//                   // complete_reservation_Data: roomReservationHistory[k]
-//                 }
-//                 bookings.push(bookingdata)
-//             }
-
-//             let roomReservationData={
-//               roomNumber: categoryRooms[j].room_number,
-//               price: hotelCategories[i].category_price,
-//               bookings:bookings,
-//             }
-          
-//             roomsReservationList.push(roomReservationData)
-
-//         }
-
-//         console.log (roomsReservationList)
-
-//         let categoryData = {
-//           category:hotelCategories[i].category_name,
-//           rooms:roomsReservationList
-//         }
-
-//         stayviewData.push(categoryData)
-//     }
-
-//   //  console.log(stayviewData);
-// return stayviewData;
-
-   
-
-
-     
-
-    
-
-    
-// }
 
 
 async function getStayViewData(start_date, end_date, hotel_id) {
@@ -441,13 +370,14 @@ async function getStayViewData(start_date, end_date, hotel_id) {
           // Fetch reservation history for the current room
           let roomReservationHistory = await getRoomReservationHistory(categoryRooms[j].id);
           roomReservationHistory = roomReservationHistory.data;
-
+           
           // Extract booking data
           for (let k = 0; k < roomReservationHistory.length; k++) {
               const bookingData = {
                   guestname: roomReservationHistory[k].guestname,
                   checkin_date: roomReservationHistory[k].checkin_date,
                   checkout_date: roomReservationHistory[k].checkout_date,
+                  reservation_id: roomReservationHistory[k].reservation_id
               };
               bookings.push(bookingData);
           }
@@ -472,6 +402,25 @@ async function getStayViewData(start_date, end_date, hotel_id) {
   }
 
   return stayviewData;
+}
+
+async function getGuessTableData(hotel_id){
+
+  try{
+    const query = "SELECT guestname,phonenumber,email,dateofbirth,gender,country,state,city,zip,address,special_request FROM reservations WHERE hotel_id = $1";
+    values=[hotel_id];
+    const result = await pool.query(query, [hotel_id]); // Pass hotel_id as parameter
+
+    if (result.rows.length === 0) {
+      return { message: "No guests found for this hotel" }; // No categories found
+    }
+
+    return { message: "guests retrieved", data: result.rows }; // Return categories
+  }
+  catch(error){
+    console.log(error)
+  }
+
 }
 
 
@@ -558,6 +507,7 @@ module.exports = {
   getHotelCategories,
   getHotelRooms,
   createReservation,
-  getStayViewData
+  getStayViewData,
+  getGuessTableData
 };  
  
