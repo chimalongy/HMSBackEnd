@@ -251,9 +251,9 @@ async function createReservation(reservationData) {
   try {
     // Insert reservation into Reservations table
     const reservationResult = await pool.query(createReservationQuery, reservationValues);
-    console.log (reservationResult.rows[0])
+   // console.log (reservationResult.rows[0])
     // const insertedReservationID = reservationResult.rows[0].id;
-    console.log()
+    
 
     // Prepare to insert booked rooms
     const createBookedRoomsQuery = `
@@ -274,6 +274,26 @@ async function createReservation(reservationData) {
       ];
 
     const result =   await pool.query(createBookedRoomsQuery, bookedRoomValues)
+
+
+   let reservationLogData = {
+      reservation_id: reservationID,
+      hotel_id: room.hotel_id,
+      category_id: room.category_id,
+      room_id: room.room_id,
+      room_number: room.room_number,
+      room_category_name: room.room_category_name, 
+      activity: ""
+    }
+
+    reservationLogData.activity = reservationData.booked_by +" created reservation "+ reservationID;
+    await insertRoomLog(reservationLogData);
+    reservationLogData.activity = reservationData.booked_by +" confirmed payment status for reservation "+ reservationID + " as " + reservationData.payment_status;
+    await insertRoomLog(reservationLogData);
+    reservationLogData.activity = reservationData.booked_by +" registered "+ reservationData.guestname +" to reservation "+ reservationID;
+    await insertRoomLog(reservationLogData);
+    
+    console.log( reservationLogData);
  
      await updateRoomCheckInState(room.room_id, true);
      await updateRoomCleanState(room.room_id, false)
@@ -291,9 +311,6 @@ async function createReservation(reservationData) {
     throw err; // Rethrow the error to handle it later
   }
 }
-
-
-
 async function updateRoomCheckInState(room_id, new_check_in_state) {
   console.log("Updating check-in state.");
 
@@ -310,6 +327,7 @@ async function updateRoomCheckInState(room_id, new_check_in_state) {
     const res = await pool.query(updateCheckInStateQuery, values);
     if (res.rows.length > 0) {
       console.log("Check-in state updated successfully:", res.rows[0]);
+      
       return res.rows[0];
     } else {
       console.log("No room found with the given id.");
@@ -344,9 +362,205 @@ async function updateRoomCleanState(room_id, new_clean_state) {
     return err.message;
   }
 }
+//**** */
+async function updateReservation(reservationID, updatedReservationData) {
+  const {
+    checkin_date,
+    checkout_date,
+    nights,
+    reservation_type,
+    reservation_status,
+    business_segment,
+    category,
+    occupants,
+    guestname,
+    phonenumber,
+    email,
+    dateofbirth,
+    gender,
+    country,
+    state,
+    city,
+    zip,
+    address,
+    special_request,
+    meal_plan,
+    billed_to,
+    payment_mode,
+    payment_status,
+    amount,
+    booked_by,
+    hotel_id,
+    booked_rooms // Array of room objects
+  } = updatedReservationData;
 
+  // Update reservation query
+  const updateReservationQuery = `
+    UPDATE public.Reservations
+    SET checkin_date = $2, checkout_date = $3, nights = $4, reservation_type = $5,
+        reservation_status = $6, business_segment = $7, category = $8, occupants = $9,
+        guestname = $10, phonenumber = $11, email = $12, dateofbirth = $13, gender = $14,
+        country = $15, state = $16, city = $17, zip = $18, address = $19, special_request = $20,
+        meal_plan = $21, billed_to = $22, payment_mode = $23, payment_status = $24, amount = $25,
+        booked_by = $26, hotel_id = $27
+    WHERE id = $1
+  `;
 
+  const reservationValues = [
+    reservationID, checkin_date, checkout_date, nights, reservation_type, reservation_status,
+    business_segment, category, occupants, guestname, phonenumber, email,
+    dateofbirth, gender, country, state, city, zip, address, special_request, meal_plan,
+    billed_to, payment_mode, payment_status, amount, booked_by, hotel_id
+  ];
 
+  try {
+    // Update reservation in Reservations table
+    await pool.query(updateReservationQuery, reservationValues);
+    console.log(`Reservation ${reservationID} updated successfully.`);
+
+    // Prepare to update booked rooms (clear existing booked rooms and insert new ones)
+    const deleteBookedRoomsQuery = `
+      DELETE FROM public.BookedRooms WHERE reservation_id = $1;
+    `;
+    await pool.query(deleteBookedRoomsQuery, [reservationID]);
+    console.log(`Old booked rooms for reservation ${reservationID} deleted.`);
+
+    // Insert updated booked rooms into BookedRooms table
+    const createBookedRoomsQuery = `
+      INSERT INTO public.BookedRooms (reservation_id, hotel_id, category_id, room_id, room_number, room_category_name, price)
+      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;
+    `;
+
+    for (const room of booked_rooms) {
+      const bookedRoomValues = [
+        reservationID,
+        room.hotel_id,
+        room.category_id,
+        room.room_id,
+        room.room_number,
+        room.room_category_name,
+        room.price,
+      ];
+
+      await pool.query(createBookedRoomsQuery, bookedRoomValues);
+      console.log(`Room ${room.room_number} updated for reservation ${reservationID}.`);
+
+      // Update room state (optional based on your business logic)
+      await updateRoomCheckInState(room.room_id, true);
+      await updateRoomCleanState(room.room_id, false);
+      let reservationLogData = {
+        reservation_id: reservationID,
+        hotel_id: room.hotel_id,
+        category_id: room.category_id,
+        room_id: room.room_id,
+        room_number: room.room_number,
+        room_category_name: room.room_category_name, 
+        activity: ""
+      }
+  
+      reservationLogData.activity = updatedReservationData.booked_by +" updated the reservation "+ reservationID +" for this room.";
+      await insertRoomLog(reservationLogData);
+     
+    }
+
+    console.log("Reservation updated successfully.");
+    return { message: "success", data: reservationID };
+  } catch (err) {
+    return {message:err.message}
+  }
+}
+async function cancelReservation(reservationID) {
+  // Query to delete booked rooms associated with the reservation
+  const deleteBookedRoomsQuery = `
+    DELETE FROM public.BookedRooms WHERE reservation_id = $1 RETURNING *;
+  `;
+
+  // Query to delete the reservation itself
+  const deleteReservationQuery = `
+    DELETE FROM public.Reservations WHERE id = $1 RETURNING *;
+  `;
+
+  try {
+    // Begin transaction
+    await pool.query('BEGIN');
+
+    // Delete booked rooms first
+    const bookedRoomsResult = await pool.query(deleteBookedRoomsQuery, [reservationID]);
+    const deletedBookedRooms = bookedRoomsResult.rows;
+
+    // Update room states back to available (optional)
+    for (const room of deletedBookedRooms) {
+      await updateRoomCheckInState(room.room_id, false); // Mark room as not checked in
+      await updateRoomCleanState(room.room_id, false); // Mark room as clean
+      let reservationLogData = {
+        reservation_id: reservationID,
+        hotel_id: room.hotel_id,
+        category_id: room.category_id,
+        room_id: room.room_id,
+        room_number: room.room_number,
+        room_category_name: room.room_category_name, 
+        activity: ""
+      }
+  
+      reservationLogData.activity = " Room reservation "+ reservationID+ " was CANCELED and Deleted"
+      await insertRoomLog(reservationLogData);
+      console.log(`Room ${room.room_number} is now available.`);
+      
+    }
+
+    // Delete the reservation itself
+    const reservationResult = await pool.query(deleteReservationQuery, [reservationID]);
+    
+    if (reservationResult.rowCount === 0) {
+      throw new Error(`Reservation with ID ${reservationID} not found.`);
+    }
+
+    console.log(`Reservation ${reservationID} and associated booked rooms deleted successfully.`);
+
+    // Commit transaction
+    await pool.query('COMMIT');
+
+    return { message: "success", data: reservationID };
+  } catch (err) {
+    
+    await pool.query('ROLLBACK');
+    return { message: err.message};
+  }
+}
+
+async function getCityLedger(hotel_id) {
+  const cityLedgerQuery = `
+    SELECT 
+      id AS reservation_id,
+      guestname,
+      phonenumber,
+      email,
+      billed_to,
+      amount,
+      payment_status,
+      payment_mode,
+      city,
+      state,
+      country
+    FROM 
+      public.Reservations
+    WHERE 
+      payment_status = 'unpaid' 
+      AND hotel_id = $1  -- Filter by hotel_id
+    ORDER BY
+      city, guestname;
+  `;
+
+  try {
+    // Pass hotel_id as a parameter to filter city ledger results by hotel
+    const result = await pool.query(cityLedgerQuery, [hotel_id]);
+   
+    return result.rows;
+  } catch (err) {
+    console.error("Error fetching city ledger for hotel_id:", err.message);
+    throw err; // Rethrow to handle it appropriately
+  }
+}
 
 async function getStayViewData(start_date, end_date, hotel_id) {
   let stayviewData = [];
@@ -404,7 +618,6 @@ async function getStayViewData(start_date, end_date, hotel_id) {
 
   return stayviewData;
 }
-
 async function getGuessTableData(hotel_id){
 
   try{
@@ -423,6 +636,151 @@ async function getGuessTableData(hotel_id){
   }
 
 }
+async function insertRoomLog(roomLogData) {
+  const {
+    reservation_id,
+    hotel_id,
+    category_id,
+    room_id,
+    room_number,
+    room_category_name,
+    activity
+  } = roomLogData;
+
+  const insertRoomLogQuery = `
+    INSERT INTO public.Roomlogs (
+      activity_date,
+      reservation_id,
+      hotel_id,
+      category_id,
+      room_id,
+      room_number,
+      room_category_name,
+      activity
+    ) VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7) RETURNING *;
+  `;
+
+  const roomLogValues = [
+    reservation_id,
+    hotel_id,
+    category_id,
+    room_id,
+    room_number,
+    room_category_name,
+    activity
+  ];
+
+  try {
+    const result = await pool.query(insertRoomLogQuery, roomLogValues);
+    console.log("Room log inserted successfully:", result.rows[0]);
+    return {message:"success", data:result.rows[0]}; // Return the inserted room log
+  } catch (err) {
+    console.error("Error inserting room log:", err.message);
+    return {message: err}; // Rethrow the error to handle it later
+  }
+}
+async function getRoomLogs(filters) {
+  const { hotel_id, reservation_id, room_id, category_id } = filters;
+
+  // Base query
+  let query = `
+    SELECT * FROM public.Roomlogs
+  `;
+  
+  const conditions = [];
+  const values = [];
+
+  // Add filters dynamically based on provided parameters
+  if (hotel_id) {
+    conditions.push(`hotel_id = $${conditions.length + 1}`);
+    values.push(hotel_id);
+  }
+  
+  if (reservation_id) {
+    conditions.push(`reservation_id = $${conditions.length + 1}`);
+    values.push(reservation_id);
+  }
+  
+  if (room_id) {
+    conditions.push(`room_id = $${conditions.length + 1}`);
+    values.push(room_id);
+  }
+  
+  if (category_id) {
+    conditions.push(`category_id = $${conditions.length + 1}`);
+    values.push(category_id);
+  }
+
+  // If there are any conditions, append them to the query
+  if (conditions.length > 0) {
+    query += ` WHERE ` + conditions.join(' AND ');
+  }
+
+  try {
+    const result = await pool.query(query, values);
+    console.log("Room logs retrieved successfully:", result.rows);
+    return result.rows; // Return the retrieved room logs
+  } catch (err) {
+    console.error("Error retrieving room logs:", err.message);
+    throw err; // Rethrow the error to handle it later
+  }
+}
+async function getHotelReservations(hotel_id) {
+  const getReservationsByHotelQuery = `
+    SELECT 
+      public.Reservations.id,
+      public.Reservations.checkin_date,
+      public.Reservations.checkout_date,
+      public.Reservations.nights,
+      public.Reservations.reservation_type,
+      public.Reservations.reservation_status,
+      public.Reservations.business_segment,
+      public.Reservations.category,
+      public.Reservations.occupants,
+      public.Reservations.guestname,
+      public.Reservations.phonenumber,
+      public.Reservations.email,
+      public.Reservations.dateofbirth,
+      public.Reservations.gender,
+      public.Reservations.country,
+      public.Reservations.state,
+      public.Reservations.city,
+      public.Reservations.zip,
+      public.Reservations.address,
+      public.Reservations.special_request,
+      public.Reservations.meal_plan,
+      public.Reservations.billed_to,
+      public.Reservations.payment_mode,
+      public.Reservations.payment_status,
+      public.Reservations.amount,
+      public.Reservations.booked_by,
+      public.Reservations.hotel_id,
+      COUNT(public.BookedRooms.room_id) AS booked_rooms_count
+    FROM 
+      public.Reservations
+    LEFT JOIN 
+      public.BookedRooms 
+    ON 
+      public.Reservations.id = public.BookedRooms.reservation_id
+    WHERE 
+      public.Reservations.hotel_id = $1  -- Filter by hotel_id
+    GROUP BY 
+      public.Reservations.id
+    ORDER BY 
+      public.Reservations.checkin_date DESC;
+  `;
+
+  try {
+    // Fetch reservations for the specified hotel_id along with the number of booked rooms
+    const result = await pool.query(getReservationsByHotelQuery, [hotel_id]);
+
+    // Return the reservations for the specified hotel and their booked rooms count
+    return result.rows;
+  } catch (err) {
+    console.error("Error retrieving reservations for hotel_id:", err.message);
+    throw err; // Rethrow the error to handle it later
+  }
+}
 
 
 
@@ -430,7 +788,7 @@ async function getGuessTableData(hotel_id){
 
 
 
-
+ 
 
 async function createReservationsTable() { 
   const createReservationTableQuery= `
@@ -499,9 +857,37 @@ async function createBookedRoomsTable() {
   }
 }
 
+async function createRoomLogsTable() {
+  const createRoomLogTableQuery = `
+  CREATE TABLE IF NOT EXISTS public.Roomlogs (
+    id SERIAL PRIMARY KEY,
+    activity_date TIMESTAMP NOT NULL,  -- Changed to TIMESTAMP for date and time
+    reservation_id VARCHAR(255) NOT NULL,  -- Matches VARCHAR(255) type of Reservations.id
+    hotel_id INTEGER NOT NULL,
+    category_id INTEGER NOT NULL,
+    room_id INTEGER NOT NULL,
+    room_number VARCHAR(50) NOT NULL,
+    room_category_name VARCHAR(255),
+    activity TEXT NOT NULL  -- Changed to TEXT for longer activity descriptions
+   
+  );
+  `;
+
+  try {
+    await pool.query(createRoomLogTableQuery);
+    console.log("Room Logs table created successfully.");
+  } catch (err) {
+    console.error("Error creating Room Logs table:", err.message);
+  }
+}
+ 
+
+ 
+
 
 createReservationsTable();
 createBookedRoomsTable();
+createRoomLogsTable(); 
  
 module.exports = {
   hotelLogin,
@@ -509,6 +895,15 @@ module.exports = {
   getHotelRooms,
   createReservation,
   getStayViewData,
-  getGuessTableData
+  updateRoomCleanState, 
+  updateRoomCheckInState,
+  getGuessTableData,
+  insertRoomLog,
+  getRoomLogs,
+  updateReservation,
+  cancelReservation,
+  getCityLedger,
+  getHotelReservations
+
 };  
  
