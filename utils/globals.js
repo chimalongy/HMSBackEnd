@@ -49,10 +49,20 @@ async function checkPassword(plainPassword, hashedPassword) {
     return `${year}-${month}-${day}`;
   }
 
+
+  function getCurrentFormattedDate() {
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
 module.exports ={
     encryptPassword,
     checkPassword,
     businessName,
     getDateMonthsBack,
-    getDateMonthsAhead
+    getDateMonthsAhead,
+    getCurrentFormattedDate
 }

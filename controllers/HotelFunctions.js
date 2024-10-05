@@ -781,6 +781,68 @@ async function getHotelReservations(hotel_id) {
     throw err; // Rethrow the error to handle it later
   }
 }
+async function checkoutReservation(reservationID, checkedOutBy) {
+  try {
+    // Step 1: Update the reservation status to 'Checked out' and set the checkout date
+    const updateReservationStatusQuery = `
+      UPDATE public.Reservations
+      SET reservation_status = 'checkedout'
+      WHERE id = $1
+      RETURNING *;
+    `;
+    
+    const reservationResult = await pool.query(updateReservationStatusQuery, [reservationID]);
+
+    if (reservationResult.rowCount === 0) {
+      return {message:"Reservation not found or already checked out."}
+    }
+
+    const reservationData = reservationResult.rows[0];
+
+    // Step 2: Retrieve all the rooms associated with this reservation from BookedRooms
+    const getBookedRoomsQuery = `
+      SELECT hotel_id, category_id, room_id, room_number, room_category_name
+      FROM public.BookedRooms
+      WHERE reservation_id = $1;
+    `;
+
+    const bookedRoomsResult = await pool.query(getBookedRoomsQuery, [reservationID]);
+
+    const bookedRooms = bookedRoomsResult.rows;
+
+    if (bookedRooms.length === 0) {
+      
+      return {message:"Reservation not found or already checked out."}
+    }
+
+    // Step 3: Update the check-in and clean states of each room
+    for (const room of bookedRooms) {
+      // Log checkout activity
+      let checkoutLogData = {
+        reservation_id: reservationID,
+        hotel_id: room.hotel_id,
+        category_id: room.category_id,
+        room_id: room.room_id,
+        room_number: room.room_number,
+        room_category_name: room.room_category_name,
+        activity: ""
+      };
+
+      checkoutLogData.activity = `${checkedOutBy} checked out reservation ${reservationID}`;
+      await insertRoomLog(checkoutLogData);
+
+      // Set room's check-in state to false (available) and clean state to true (cleaned)
+      await updateRoomCheckInState(room.room_id, false);
+      await updateRoomCleanState(room.room_id, true);
+    }
+
+    console.log(`Reservation ${reservationID} checked out successfully.`);
+    return { message: "success", data: reservationID };
+  } catch (err) {
+    console.error("Error during checkout:", err.message);
+    throw err; // Rethrow error to handle it elsewhere
+  }
+}
 
 
 
@@ -903,7 +965,8 @@ module.exports = {
   updateReservation,
   cancelReservation,
   getCityLedger,
-  getHotelReservations
+  getHotelReservations,
+  checkoutReservation
 
 };  
  

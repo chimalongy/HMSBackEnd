@@ -17,6 +17,7 @@ const {
   cancelReservation,
   getCityLedger,
   getHotelReservations,
+  checkoutReservation
 } = require("../controllers/HotelFunctions");
 
 const hotelAuthMiddleware = (req, res, next) => {
@@ -423,17 +424,60 @@ router.delete("/cancelReservation", async (req, res) => {
   }
 });
 
-module.exports = router;
+router.post("checkoutReservation", async(req, res)=>{
+  let { hotel_id, reservationID, checkedOutBy}= req.body
 
-module.exports = router;
+  if (!hotel_id || hotel_id==""){
+    return  res.status(200).json({message:"no reservationID found"})
+    }
+
+  if (!reservationID || checkedOutBy==""){
+  return  res.status(200).json({message:"no reservationID found"})
+  }
+
+  if (!checkedOutBy || checkedOutBy ==""){
+    return  res.status(200).json({message:"no staff name found"})
+    }
+
+    let result = await checkoutReservation(reservationID, checkedOutBy)
+    if (result.data){
+      let hotel_room_data =   await getHotelRooms(hotel_id)
+      hotel_room_data = hotel_room_data.data;
+      let stayviewData = await getStayViewData("","", hotel_id)
+      let reservationData = await getHotelReservations(hotel_id)
+      let guestTableData = await getGuessTableData(hotel_id);
+      guestTableData = guestTableData.data;
+      let cityledger = getCityLedger(hotel_id);
+      
+      res.status(200).json({
+       
+        hotel_room_data: hotel_room_data,
+        hotel_updatedstayview_data: stayviewData,
+        hotel_guest_data: guestTableData,
+        hotel_reservation_data: reservationData,
+        hotel_cityledger: cityledger,
+      });
+
+    }
+    else{
+      res.status(200).json({message:result.message})
+    }
+
+
+})
 
 router.get("/default", async (req, res) => {
   //let result = await getCityLedger();
-  let result = await getHotelReservations(1);
+ // let result = await getHotelReservations(1);
+ 
+ let result = await checkoutReservation(reservationID, checkedOutBy)
+ 
+
+
   console.log(result);
   res.send(result);
 });
 
-module.exports = router;
+module.exports = router; 
 
 module.exports = router;
