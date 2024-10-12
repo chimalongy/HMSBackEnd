@@ -577,34 +577,39 @@ async function getStayViewData(start_date, end_date, hotel_id) {
       let categoryRooms = await getHotelRoomsByCategory(hotel_id, hotelCategories[i].id);
       categoryRooms = categoryRooms.data;
 
-      // Loop through each room in the current category
+      if (categoryRooms.length>0){
+        // Loop through each room in the current category
       for (let j = 0; j < categoryRooms.length; j++) {
-          let bookings = [];  // Reset the bookings list for each room
-          
-          // Fetch reservation history for the current room
-          let roomReservationHistory = await getRoomReservationHistory(categoryRooms[j].id);
-          roomReservationHistory = roomReservationHistory.data;
-           
-          // Extract booking data
-          for (let k = 0; k < roomReservationHistory.length; k++) {
-              const bookingData = {
-                  guestname: roomReservationHistory[k].guestname,
-                  checkin_date: roomReservationHistory[k].checkin_date,
-                  checkout_date: roomReservationHistory[k].checkout_date,
-                  reservation_id: roomReservationHistory[k].reservation_id
-              };
-              bookings.push(bookingData);
-          }
+        let bookings = [];  // Reset the bookings list for each room
+        
+        // Fetch reservation history for the current room
+        let roomReservationHistory = await getRoomReservationHistory(categoryRooms[j].id);
+        roomReservationHistory = roomReservationHistory.data;
+         
+        // Extract booking data
+        for (let k = 0; k < roomReservationHistory.length; k++) {
+            const bookingData = {
+                guestname: roomReservationHistory[k].guestname,
+                checkin_date: roomReservationHistory[k].checkin_date,
+                checkout_date: roomReservationHistory[k].checkout_date,
+                reservation_id: roomReservationHistory[k].reservation_id
+            };
+            bookings.push(bookingData);
+        }
 
-          // Construct room reservation data
-          let roomReservationData = {
-              roomNumber: categoryRooms[j].room_number,
-              room_id: categoryRooms[j].id,
-              price: hotelCategories[i].category_price,
-              bookings: bookings,
-          };
+        // Construct room reservation data
+        let roomReservationData = {
+            roomNumber: categoryRooms[j].room_number,
+            room_id: categoryRooms[j].id,
+            price: hotelCategories[i].category_price,
+            bookings: bookings,
+        };
 
-          roomsReservationList.push(roomReservationData);
+        roomsReservationList.push(roomReservationData);
+    }
+      }
+      else{
+
       }
 
       // Construct category data and push to stayviewData
@@ -621,7 +626,7 @@ async function getStayViewData(start_date, end_date, hotel_id) {
 async function getGuessTableData(hotel_id){
 
   try{
-    const query = "SELECT guestname,phonenumber,email,dateofbirth,gender,country,state,city,zip,address,special_request FROM reservations WHERE hotel_id = $1";
+    const query = "SELECT guestname,phonenumber,email,dateofbirth,gender,country,state,city,zip,address,special_request, business_segment FROM reservations WHERE hotel_id = $1";
     values=[hotel_id];
     const result = await pool.query(query, [hotel_id]); // Pass hotel_id as parameter
 
@@ -636,6 +641,8 @@ async function getGuessTableData(hotel_id){
   }
 
 }
+
+
 async function insertRoomLog(roomLogData) {
   const {
     reservation_id,
@@ -725,62 +732,194 @@ async function getRoomLogs(filters) {
     throw err; // Rethrow the error to handle it later
   }
 }
+
+// async function getHotelReservations(hotel_id) {
+//   const getReservationsByHotelQuery = `
+//     SELECT 
+//       public.Reservations.id,
+//       public.Reservations.checkin_date,
+//       public.Reservations.checkout_date,
+//       public.Reservations.nights,
+//       public.Reservations.reservation_type,
+//       public.Reservations.reservation_status,
+//       public.Reservations.business_segment,
+//       public.Reservations.category,
+//       public.Reservations.occupants,
+//       public.Reservations.guestname,
+//       public.Reservations.phonenumber,
+//       public.Reservations.email,
+//       public.Reservations.dateofbirth,
+//       public.Reservations.gender,
+//       public.Reservations.country,
+//       public.Reservations.state,
+//       public.Reservations.city,
+//       public.Reservations.zip,
+//       public.Reservations.address,
+//       public.Reservations.special_request,
+//       public.Reservations.meal_plan,
+//       public.Reservations.billed_to,
+//       public.Reservations.payment_mode,
+//       public.Reservations.payment_status,
+//       public.Reservations.amount,
+//       public.Reservations.booked_by,
+//       public.Reservations.hotel_id,
+//       COUNT(public.BookedRooms.room_id) AS booked_rooms_count
+//     FROM 
+//       public.Reservations
+//     LEFT JOIN 
+//       public.BookedRooms 
+//     ON 
+//       public.Reservations.id = public.BookedRooms.reservation_id
+//     WHERE 
+//       public.Reservations.hotel_id = $1  -- Filter by hotel_id
+//     GROUP BY 
+//       public.Reservations.id
+//     ORDER BY 
+//       public.Reservations.checkin_date DESC;
+//   `;
+
+//   try {
+//     // Fetch reservations for the specified hotel_id along with the number of booked rooms
+//     const result = await pool.query(getReservationsByHotelQuery, [hotel_id]);
+
+//     // Return the reservations for the specified hotel and their booked rooms count
+//     return result.rows;
+//   } catch (err) {
+//     console.error("Error retrieving reservations for hotel_id:", err.message);
+//     throw err; // Rethrow the error to handle it later
+//   }
+// }
+
+         
+
+
+
 async function getHotelReservations(hotel_id) {
-  const getReservationsByHotelQuery = `
+  const getreservationsByHotelQuery = `
     SELECT 
-      public.Reservations.id,
-      public.Reservations.checkin_date,
-      public.Reservations.checkout_date,
-      public.Reservations.nights,
-      public.Reservations.reservation_type,
-      public.Reservations.reservation_status,
-      public.Reservations.business_segment,
-      public.Reservations.category,
-      public.Reservations.occupants,
-      public.Reservations.guestname,
-      public.Reservations.phonenumber,
-      public.Reservations.email,
-      public.Reservations.dateofbirth,
-      public.Reservations.gender,
-      public.Reservations.country,
-      public.Reservations.state,
-      public.Reservations.city,
-      public.Reservations.zip,
-      public.Reservations.address,
-      public.Reservations.special_request,
-      public.Reservations.meal_plan,
-      public.Reservations.billed_to,
-      public.Reservations.payment_mode,
-      public.Reservations.payment_status,
-      public.Reservations.amount,
-      public.Reservations.booked_by,
-      public.Reservations.hotel_id,
-      COUNT(public.BookedRooms.room_id) AS booked_rooms_count
+      reservations.id,
+      reservations.checkin_date,
+      reservations.checkout_date,
+      reservations.nights,
+      reservations.reservation_type,
+      reservations.reservation_status,
+      reservations.business_segment,
+      reservations.category,
+      reservations.occupants,
+      reservations.guestname,
+      reservations.phonenumber,
+      reservations.email,
+      reservations.dateofbirth,
+      reservations.gender,
+      reservations.country,
+      reservations.state,
+      reservations.city,
+      reservations.zip,
+      reservations.address,
+      reservations.special_request,
+      reservations.meal_plan,
+      reservations.billed_to,
+      reservations.payment_mode,
+      reservations.payment_status,
+      reservations.amount,
+      reservations.booked_by,
+      reservations.hotel_id,
+      json_agg(
+        json_build_object(
+          'room_id', BookedRooms.room_id,
+          'category_id', BookedRooms.category_id,
+          'room_number', BookedRooms.room_number,
+          'room_category_name', BookedRooms.room_category_name,
+          'price', BookedRooms.price
+        )
+      ) AS booked_rooms
     FROM 
-      public.Reservations
+      reservations
     LEFT JOIN 
-      public.BookedRooms 
+      BookedRooms 
     ON 
-      public.Reservations.id = public.BookedRooms.reservation_id
+      reservations.id = BookedRooms.reservation_id
     WHERE 
-      public.Reservations.hotel_id = $1  -- Filter by hotel_id
+      reservations.hotel_id = $1  -- Filter by hotel_id
     GROUP BY 
-      public.Reservations.id
+      reservations.id
     ORDER BY 
-      public.Reservations.checkin_date DESC;
+      reservations.checkin_date DESC;
   `;
 
   try {
-    // Fetch reservations for the specified hotel_id along with the number of booked rooms
-    const result = await pool.query(getReservationsByHotelQuery, [hotel_id]);
+    // Fetch reservations for the specified hotel_id along with the booked rooms details
+    const result = await pool.query(getreservationsByHotelQuery, [hotel_id]);
 
-    // Return the reservations for the specified hotel and their booked rooms count
+    // Return the reservations for the specified hotel, each including its booked rooms
     return result.rows;
   } catch (err) {
     console.error("Error retrieving reservations for hotel_id:", err.message);
     throw err; // Rethrow the error to handle it later
   }
 }
+
+
+
+// async function getHotelReservations(hotel_id) {
+//   const getreservationsByHotelQuery = `
+//     SELECT 
+//       reservations.id,
+//       reservations.checkin_date,
+//       reservations.checkout_date,
+//       reservations.nights,
+//       reservations.reservation_type,
+//       reservations.reservation_status,
+//       reservations.business_segment,
+//       reservations.category,
+//       reservations.occupants,
+//       reservations.guestname,
+//       reservations.phonenumber,
+//       reservations.email,
+//       reservations.dateofbirth,
+//       reservations.gender,
+//       reservations.country,
+//       reservations.state,
+//       reservations.city,
+//       reservations.zip,
+//       reservations.address,
+//       reservations.special_request,
+//       reservations.meal_plan,
+//       reservations.billed_to,
+//       reservations.payment_mode,
+//       reservations.payment_status,
+//       reservations.amount,
+//       reservations.booked_by,
+//       reservations.hotel_id,
+//       COUNT(BookedRooms.room_id) AS booked_rooms_count
+//     FROM 
+//       reservations
+//     LEFT JOIN 
+//       BookedRooms 
+//     ON 
+//       reservations.id = BookedRooms.reservation_id
+//     WHERE 
+//       reservations.hotel_id = $1  -- Filter by hotel_id
+//     GROUP BY 
+//       reservations.id
+//     ORDER BY 
+//       reservations.checkin_date DESC;
+//   `;
+
+//   try {
+//     // Fetch reservations for the specified hotel_id along with the number of booked rooms
+//     const result = await pool.query(getreservationsByHotelQuery, [hotel_id]);
+
+//     // Return the reservations for the specified hotel and their booked rooms count
+//     return result.rows;
+//   } catch (err) {
+//     console.error("Error retrieving reservations for hotel_id:", err.message);
+//     throw err; // Rethrow the error to handle it later
+//   }
+// }
+
+
+
 async function checkoutReservation(reservationID, checkedOutBy) {
   try {
     // Step 1: Update the reservation status to 'Checked out' and set the checkout date
@@ -844,6 +983,10 @@ async function checkoutReservation(reservationID, checkedOutBy) {
   }
 }
 
+
+async function sendReport(reportType, attachmennt, hotel_id){
+  
+}
 
 
 

@@ -1,6 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
+const nodemailer = require('nodemailer');
+const multer = require('multer');
+const path = require("path");
+
+
 
 const {
   hotelLogin,
@@ -19,6 +24,28 @@ const {
   getHotelReservations,
   checkoutReservation
 } = require("../controllers/HotelFunctions");
+
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, './uploads'); // Define the destination folder
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname)); // Custom file name
+  }
+});
+const upload = multer({
+  storage: storage,
+});
+
+
+
+
+
+
+
+
 
 const hotelAuthMiddleware = (req, res, next) => {
   const token = req.cookies["hotel_token"]; // Read the token from cookies
@@ -477,6 +504,50 @@ router.get("/default", async (req, res) => {
   console.log(result);
   res.send(result);
 });
+
+router.post ("/sendReport", upload.single('reportFile'), async(req,res)=>{
+  const { reportType, hotel_name } = req.body;
+  if (!req.file) {
+    return res.status(400).send('No file uploaded.');
+  }
+
+  try {
+   
+   
+    const transporter = nodemailer.createTransport({
+      service: 'gmail', 
+      auth: {
+        user: process.env.SENDER_EMAIL, 
+        pass: process.env.SENDER_EMAIL_PASSWORD, 
+      },
+    }); 
+
+    
+    const mailOptions = {
+      from: 'me.olegeme@gmail.com',
+      to: 'customersreach@gmail.com', 
+      subject: `${reportType} AUDIT REPORT FOR: ${hotel_name}`,
+      text: `Attached is the ${reportType} report for hotel ID ${hotel_name}.`,
+      attachments: [
+        {
+          filename: req.file.originalname,
+          path: req.file.path, 
+        },
+      ],
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent:', info.response);
+
+  
+    res.send('File uploaded and email sent successfully!');
+  } catch (error) {
+    console.error('Error sending email:', error);
+    res.status(500).send('Error sending email.');
+  }
+
+
+} )
 
 module.exports = router; 
 
