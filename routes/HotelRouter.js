@@ -522,11 +522,18 @@ router.post ("/sendReport", upload.single('reportFile'), async(req,res)=>{
       },
     }); 
 
+    const currentDate = new Date();
+
+    const day = String(currentDate.getDate()).padStart(2, '0');      // Day (e.g., 12)
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Month (e.g., 10, note that getMonth() is 0-indexed)
+    const year = currentDate.getFullYear();                          // Year (e.g., 2024)
     
+    // Format: MM/DD/YYYY
+    const formattedDate = `${month}/${day}/${year}`;
     const mailOptions = {
       from: 'me.olegeme@gmail.com',
       to: 'customersreach@gmail.com', 
-      subject: `${reportType} AUDIT REPORT FOR: ${hotel_name}`,
+      subject: `${reportType} ${formattedDate} AUDIT REPORT FOR: ${hotel_name} `,
       text: `Attached is the ${reportType} report for hotel ID ${hotel_name}.`,
       attachments: [
         {
