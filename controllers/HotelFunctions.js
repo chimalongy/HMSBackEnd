@@ -419,17 +419,17 @@ async function updateReservation(reservationID, updatedReservationData) {
     console.log(`Reservation ${reservationID} updated successfully.`);
 
 
-    const reservedRoomsQuery = 'Select * from public.bookedrooms where reservation_id = $1;'
+    const reservedRoomsQuery = 'SELECT * FROM public.bookedrooms WHERE reservation_id = $1;';
     let res = await pool.query(reservedRoomsQuery, [reservationID]);
-    if (res.rows.length > 0) {
-      
-      for (let i=0; i< res.length; i++){
-        const room_to_delete_room_id = res[i].room_id;
-        await updateRoomCheckInState(room_to_delete_room_id, false);
-        await updateRoomCleanState (room_to_delete_room_id, false);
-      }
     
-    } 
+    if (res.rows.length > 0) {
+      for (let i = 0; i < res.rows.length; i++) {
+        const room_to_delete_room_id = res.rows[i].room_id;
+        await updateRoomCheckInState(room_to_delete_room_id, false);
+        await updateRoomCleanState(room_to_delete_room_id, false);
+      }
+    }
+    
 
     // Prepare to update booked rooms (clear existing booked rooms and insert new ones)
     const deleteBookedRoomsQuery = `
