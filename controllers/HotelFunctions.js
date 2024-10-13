@@ -417,6 +417,7 @@ async function updateReservation(reservationID, updatedReservationData) {
     // Update reservation in Reservations table
     await pool.query(updateReservationQuery, reservationValues);
     console.log(`Reservation ${reservationID} updated successfully.`);
+    
 
     // Prepare to update booked rooms (clear existing booked rooms and insert new ones)
     const deleteBookedRoomsQuery = `
@@ -985,7 +986,7 @@ async function checkoutReservation(reservationID, checkedOutBy) {
 
 
 async function sendReport(reportType, attachmennt, hotel_id){
-  
+
 }
 
 
