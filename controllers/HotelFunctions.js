@@ -426,7 +426,7 @@ async function updateReservation(reservationID, updatedReservationData) {
       for (let i=0; i< res.length; i++){
         const room_to_delete_room_id = res[i].room_id;
         await updateRoomCheckInState(room_to_delete_room_id, false);
-        await updateRoomCleanState (room_to_delete_room_id, true);
+        await updateRoomCleanState (room_to_delete_room_id, false);
       }
     
     } 
