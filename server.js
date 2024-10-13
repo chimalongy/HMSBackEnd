@@ -27,7 +27,7 @@ const pool = new Pool({
 app.use(cookieParser()); 
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:3000',  // Replace with the exact origin of your React app
+  origin: 'http://localhost:5173',  // Replace with the exact origin of your React app
   credentials: true,                // Allow credentials to be sent (cookies, authorization headers, etc.)
 }));
 

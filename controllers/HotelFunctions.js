@@ -577,7 +577,13 @@ async function getStayViewData(start_date, end_date, hotel_id) {
       let categoryRooms = await getHotelRoomsByCategory(hotel_id, hotelCategories[i].id);
       categoryRooms = categoryRooms.data;
 
-      if (categoryRooms.length>0){
+         // Check if categoryRooms is undefined or has a length of 0
+    if (!categoryRooms || categoryRooms.length === 0 ) {
+      // Handle the case where categoryRooms is undefined or has no rooms
+      console.warn(`No rooms available for category ID ${hotelCategories[i].id}.`);
+       }
+
+      else {
         // Loop through each room in the current category
       for (let j = 0; j < categoryRooms.length; j++) {
         let bookings = [];  // Reset the bookings list for each room
@@ -608,9 +614,7 @@ async function getStayViewData(start_date, end_date, hotel_id) {
         roomsReservationList.push(roomReservationData);
     }
       }
-      else{
-
-      }
+     
 
       // Construct category data and push to stayviewData
       let categoryData = {
