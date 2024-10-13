@@ -141,7 +141,7 @@ router.post("/gethotelcategories", hotelAuthMiddleware, async (req, res) => {
 router.post("/updateRoomCleanState", async (req, res) => {
   const { hotel_id, room_id, new_cleanState } = req.body;
 
-  if (!room_id || !new_cleanState) {
+  if (!room_id && !new_cleanState) {
     return res
       .status(200)
       .json({ message: "room_id or new_cleanState not found" });
